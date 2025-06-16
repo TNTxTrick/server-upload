@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Neon Image Upload",
   description: "Upload images with neon effects and customizable themes",
-    generator: 'v0.dev'
+    generator: 'tnt'
 }
 
 export default function RootLayout({

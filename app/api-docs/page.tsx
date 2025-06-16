@@ -18,8 +18,8 @@ export default function ApiDocs() {
     }
   }
 
-  const javascriptExample = `// JavaScript/Node.js Example
-async function uploadImage(file) {
+  const javascriptExample = `// JavaScript/Node.js Example - Media Upload
+async function uploadMedia(file) {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -34,6 +34,7 @@ async function uploadImage(file) {
     if (result.success) {
       console.log('Upload successful!');
       console.log('File URL:', result.url);
+      console.log('File type:', result.fileType);
       console.log('File size:', result.size);
       return result.url;
     } else {
@@ -44,38 +45,59 @@ async function uploadImage(file) {
   }
 }
 
-// Usage with file input
+// Usage with file input (all device files)
 document.getElementById('fileInput').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    uploadImage(file);
-  }
-});
-
-// Usage with drag & drop
-function handleDrop(e) {
-  e.preventDefault();
-  const files = Array.from(e.dataTransfer.files);
+  const files = Array.from(e.target.files);
   files.forEach(file => {
-    if (file.type.startsWith('image/')) {
-      uploadImage(file);
+    // Check if file is supported
+    const supportedTypes = [
+      // Images
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      // Videos  
+      'video/mp4', 'video/mpeg', 'video/quicktime',
+      // Audio
+      'audio/mp3', 'audio/mpeg', 'audio/wav'
+    ];
+    
+    if (supportedTypes.includes(file.type)) {
+      uploadMedia(file);
     }
   });
+});
+
+// Batch upload with progress tracking
+async function uploadMultipleFiles(files) {
+  const results = [];
+  
+  // Upload all files concurrently for maximum speed
+  const uploadPromises = files.map(async (file, index) => {
+    console.log(\`Uploading \${file.name}...\`);
+    const url = await uploadMedia(file);
+    return { file: file.name, url, index };
+  });
+  
+  const uploadResults = await Promise.all(uploadPromises);
+  console.log(\`Uploaded \${uploadResults.length} files successfully!\`);
+  
+  return uploadResults;
 }`
 
-  const pythonExample = `# Python Example using requests
+  const pythonExample = `# Python Example - High-Speed Media Upload
 import requests
 import json
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
-def upload_image(file_path):
+def upload_media_file(file_path):
     """
-    Upload an image file to the server
+    Upload a media file (image, video, audio) to the server
     
     Args:
-        file_path (str): Path to the image file
+        file_path (str): Path to the media file
         
     Returns:
-        dict: Server response with file URL
+        dict: Server response with file URL and metadata
     """
     url = "https://your-app.vercel.app/api/upload"
     
@@ -86,84 +108,117 @@ def upload_image(file_path):
             
         if response.status_code == 200:
             result = response.json()
-            print(f"Upload successful!")
-            print(f"File URL: {result['url']}")
-            print(f"File size: {result['size']} bytes")
-            return result['url']
+            print(f"✅ Upload successful: {result['filename']}")
+            print(f"🔗 URL: {result['url']}")
+            print(f"📁 Type: {result['fileType']}")
+            print(f"📊 Size: {result['size']} bytes")
+            return result
         else:
             error = response.json()
-            print(f"Upload failed: {error.get('error', 'Unknown error')}")
+            print(f"❌ Upload failed: {error.get('error', 'Unknown error')}")
             return None
             
-    except FileNotFoundError:
-        print(f"File not found: {file_path}")
-        return None
-    except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
-        return None
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error uploading {file_path}: {e}")
         return None
 
-# Usage examples
-if __name__ == "__main__":
-    # Upload single image
-    image_url = upload_image("path/to/your/image.jpg")
+def upload_media_folder(folder_path, max_workers=5):
+    """
+    Upload all supported media files from a folder using concurrent uploads
     
-    # Upload multiple images
-    image_files = ["image1.jpg", "image2.png", "image3.gif"]
-    uploaded_urls = []
-    
-    for image_file in image_files:
-        url = upload_image(image_file)
-        if url:
-            uploaded_urls.append(url)
-    
-    print(f"Successfully uploaded {len(uploaded_urls)} images")
-
-# Advanced example with error handling and progress
-import os
-from pathlib import Path
-
-def upload_images_from_folder(folder_path):
-    """Upload all images from a folder"""
+    Args:
+        folder_path (str): Path to folder containing media files
+        max_workers (int): Number of concurrent uploads
+    """
     folder = Path(folder_path)
-    image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'}
     
+    # Supported file extensions
+    supported_extensions = {
+        # Images
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff',
+        # Videos
+        '.mp4', '.mpeg', '.mov', '.avi',
+        # Audio
+        '.mp3', '.wav', '.ogg'
+    }
+    
+    # Find all supported files
+    media_files = []
+    for file_path in folder.rglob('*'):
+        if file_path.suffix.lower() in supported_extensions:
+            media_files.append(str(file_path))
+    
+    print(f"Found {len(media_files)} media files to upload")
+    
+    # Upload files concurrently for maximum speed
     uploaded_files = []
     failed_files = []
     
-    for file_path in folder.iterdir():
-        if file_path.suffix.lower() in image_extensions:
-            print(f"Uploading {file_path.name}...")
-            url = upload_image(str(file_path))
-            
-            if url:
-                uploaded_files.append({
-                    'filename': file_path.name,
-                    'url': url
-                })
-            else:
-                failed_files.append(file_path.name)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all upload tasks
+        future_to_file = {
+            executor.submit(upload_media_file, file_path): file_path 
+            for file_path in media_files
+        }
+        
+        # Process completed uploads
+        for future in as_completed(future_to_file):
+            file_path = future_to_file[future]
+            try:
+                result = future.result()
+                if result:
+                    uploaded_files.append(result)
+                else:
+                    failed_files.append(file_path)
+            except Exception as e:
+                print(f"Exception for {file_path}: {e}")
+                failed_files.append(file_path)
     
-    print(f"\\nUpload Summary:")
+    print(f"\\n📊 Upload Summary:")
     print(f"✅ Successful: {len(uploaded_files)}")
     print(f"❌ Failed: {len(failed_files)}")
     
-    return uploaded_files, failed_files`
+    return uploaded_files, failed_files
 
-  const curlExample = `# cURL Example
+# Usage examples
+if __name__ == "__main__":
+    # Upload single media file
+    media_url = upload_media_file("path/to/your/video.mp4")
+    
+    # Upload entire media folder with high-speed concurrent uploads
+    uploaded, failed = upload_media_folder("path/to/media/folder", max_workers=10)
+    
+    # Save all uploaded URLs to a file
+    if uploaded:
+        with open("uploaded_urls.txt", "w") as f:
+            for file_data in uploaded:
+                f.write(f"{file_data['filename']}: {file_data['url']}\\n")`
+
+  const curlExample = `# cURL Examples for Media Upload
+
+# Upload an image
 curl -X POST https://your-app.vercel.app/api/upload \\
-  -F "file=@/path/to/your/image.jpg" \\
+  -F "file=@/path/to/image.jpg" \\
   -H "Content-Type: multipart/form-data"
 
-# Response example:
+# Upload a video (MP4)
+curl -X POST https://your-app.vercel.app/api/upload \\
+  -F "file=@/path/to/video.mp4" \\
+  -H "Content-Type: multipart/form-data"
+
+# Upload an audio file (MP3)
+curl -X POST https://your-app.vercel.app/api/upload \\
+  -F "file=@/path/to/audio.mp3" \\
+  -H "Content-Type: multipart/form-data"
+
+# Response example for video upload:
 {
   "success": true,
-  "filename": "image.jpg",
-  "url": "https://your-app.vercel.app/uploads/1703123456789_abc123.jpg",
-  "size": 245760,
-  "contentType": "image/jpeg",
+  "filename": "video.mp4",
+  "url": "https://your-app.vercel.app/uploads/1703123456789_abc123.mp4",
+  "size": 15728640,
+  "contentType": "video/mp4",
+  "fileType": "video",
   "uploadedAt": "2023-12-21T10:30:56.789Z",
   "message": "File uploaded successfully to server"
 }`
@@ -188,10 +243,10 @@ curl -X POST https://your-app.vercel.app/api/upload \\
           </Button>
 
           <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent mb-4">
-            API DOCUMENTATION
+            MEDIA UPLOAD API
           </h1>
           <p className="text-xl text-cyan-300/80 font-light tracking-wide">
-            Integrate image upload into your applications
+            High-speed upload for images, videos, and audio files
           </p>
           <div className="w-32 h-1 bg-gradient-to-r from-cyan-500 to-blue-500 mx-auto mt-4 rounded-full"></div>
         </div>
@@ -219,8 +274,8 @@ curl -X POST https://your-app.vercel.app/api/upload \\
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-cyan-400 mb-2">Max File Size</h3>
-                  <code className="bg-black/50 text-cyan-300 px-3 py-2 rounded block">10MB</code>
+                  <h3 className="text-lg font-semibold text-cyan-400 mb-2">Upload Speed</h3>
+                  <code className="bg-black/50 text-green-300 px-3 py-2 rounded block">High-Speed Mode</code>
                 </div>
               </div>
 
@@ -228,21 +283,26 @@ curl -X POST https://your-app.vercel.app/api/upload \\
                 <div>
                   <h3 className="text-lg font-semibold text-cyan-400 mb-2">Supported Formats</h3>
                   <div className="bg-black/50 text-cyan-300 px-3 py-2 rounded">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <span>• JPG/JPEG</span>
-                      <span>• PNG</span>
-                      <span>• GIF</span>
-                      <span>• WebP</span>
-                      <span>• SVG</span>
-                      <span>• BMP</span>
-                      <span>• TIFF</span>
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        📸 <strong>Images:</strong> JPG, PNG, GIF, WebP, SVG, BMP, TIFF
+                      </div>
+                      <div>
+                        🎥 <strong>Videos:</strong> MP4, MPEG, MOV, AVI
+                      </div>
+                      <div>
+                        🎵 <strong>Audio:</strong> MP3, WAV, OGG
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-cyan-400 mb-2">Response Format</h3>
-                  <code className="bg-black/50 text-cyan-300 px-3 py-2 rounded block">JSON</code>
+                  <h3 className="text-lg font-semibold text-cyan-400 mb-2">File Size Limits</h3>
+                  <div className="bg-black/50 text-cyan-300 px-3 py-2 rounded text-sm">
+                    <div>Images/Audio: 10MB</div>
+                    <div>Videos: 50MB</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -299,7 +359,7 @@ curl -X POST https://your-app.vercel.app/api/upload \\
 
             <div className="mt-4 p-4 bg-blue-900/30 rounded-lg border border-blue-500/30">
               <p className="text-blue-300 text-sm">
-                <strong>📦 Required Python package:</strong>{" "}
+                <strong>📦 Required Python packages:</strong>{" "}
                 <code className="bg-black/50 px-2 py-1 rounded">pip install requests</code>
               </p>
             </div>
@@ -312,7 +372,7 @@ curl -X POST https://your-app.vercel.app/api/upload \\
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-cyan-300 flex items-center">
                 <Code className="w-6 h-6 mr-3" />
-                cURL Example
+                cURL Examples
               </h2>
               <Button
                 onClick={() => copyToClipboard(curlExample, "curl")}
@@ -343,10 +403,11 @@ curl -X POST https://your-app.vercel.app/api/upload \\
                   <pre className="text-green-300 text-sm">
                     <code>{`{
   "success": true,
-  "filename": "image.jpg",
+  "filename": "video.mp4",
   "url": "https://your-app.vercel.app/uploads/...",
-  "size": 245760,
-  "contentType": "image/jpeg",
+  "size": 15728640,
+  "contentType": "video/mp4",
+  "fileType": "video",
   "uploadedAt": "2023-12-21T10:30:56.789Z",
   "message": "File uploaded successfully"
 }`}</code>
@@ -359,8 +420,10 @@ curl -X POST https://your-app.vercel.app/api/upload \\
                 <div className="bg-black/60 rounded-lg p-4">
                   <pre className="text-red-300 text-sm">
                     <code>{`{
-  "error": "Only image files are allowed",
-  "details": "File type not supported"
+  "error": "Unsupported file type",
+  "supportedTypes": [
+    "image/jpeg", "video/mp4", "audio/mp3"
+  ]
 }
 
 // Common error codes:
@@ -373,13 +436,14 @@ curl -X POST https://your-app.vercel.app/api/upload \\
             </div>
 
             <div className="mt-8 p-6 bg-gradient-to-r from-cyan-900/40 to-blue-900/40 rounded-lg border border-cyan-500/30">
-              <h3 className="text-lg font-semibold text-cyan-300 mb-3">💡 Integration Tips</h3>
+              <h3 className="text-lg font-semibold text-cyan-300 mb-3">🚀 High-Speed Upload Tips</h3>
               <ul className="text-cyan-400 space-y-2 text-sm">
-                <li>• Always validate file types on the client side before uploading</li>
-                <li>• Implement progress indicators for better user experience</li>
-                <li>• Handle errors gracefully and provide user feedback</li>
-                <li>• Consider implementing retry logic for failed uploads</li>
-                <li>• Store returned URLs in your database for future reference</li>
+                <li>• Use concurrent uploads for multiple files to maximize speed</li>
+                <li>• Validate file types and sizes on client side before uploading</li>
+                <li>• Videos up to 50MB, images/audio up to 10MB supported</li>
+                <li>• Access all device files, not just photo gallery</li>
+                <li>• Implement retry logic for failed uploads</li>
+                <li>• Store returned URLs for permanent file access</li>
               </ul>
             </div>
           </div>

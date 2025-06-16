@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef } from "react"
-import { Upload, ImageIcon, Palette, Check, X, FileText } from "lucide-react"
+import { Upload, ImageIcon, Palette, Check, X, FileText, Video, Music, File } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
@@ -16,7 +16,7 @@ const backgroundColors = [
   { name: "Dark Matrix", value: "from-gray-900 via-black to-slate-900" },
 ]
 
-export default function NeonImageUpload() {
+export default function NeonMediaUpload() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadResults, setUploadResults] = useState<any[]>([])
@@ -26,8 +26,31 @@ export default function NeonImageUpload() {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    const imageFiles = files.filter((file) => file.type.startsWith("image/"))
-    setSelectedFiles((prev) => [...prev, ...imageFiles])
+    // Accept all supported media files
+    const supportedTypes = [
+      // Images
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/svg+xml",
+      "image/bmp",
+      "image/tiff",
+      // Videos
+      "video/mp4",
+      "video/mpeg",
+      "video/quicktime",
+      "video/x-msvideo",
+      // Audio
+      "audio/mp3",
+      "audio/mpeg",
+      "audio/wav",
+      "audio/ogg",
+    ]
+
+    const mediaFiles = files.filter((file) => supportedTypes.includes(file.type))
+    setSelectedFiles((prev) => [...prev, ...mediaFiles])
   }
 
   const removeFile = (index: number) => {
@@ -40,7 +63,7 @@ export default function NeonImageUpload() {
     setUploading(true)
     const results = []
 
-    // Upload files concurrently for better performance
+    // Upload files concurrently for maximum speed
     const uploadPromises = selectedFiles.map(async (file, index) => {
       try {
         const formData = new FormData()
@@ -78,11 +101,9 @@ export default function NeonImageUpload() {
     setSelectedFiles([])
   }
 
-  // Add this function to copy links to clipboard
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      // You could add a toast notification here
     } catch (err) {
       console.error("Failed to copy: ", err)
     }
@@ -94,6 +115,20 @@ export default function NeonImageUpload() {
     const sizes = ["Bytes", "KB", "MB", "GB"]
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  }
+
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith("image/")) return <ImageIcon className="w-5 h-5 text-cyan-400" />
+    if (file.type.startsWith("video/")) return <Video className="w-5 h-5 text-purple-400" />
+    if (file.type.startsWith("audio/")) return <Music className="w-5 h-5 text-green-400" />
+    return <File className="w-5 h-5 text-gray-400" />
+  }
+
+  const getFileTypeColor = (fileType: string) => {
+    if (fileType === "image") return "text-cyan-400 bg-cyan-400/10"
+    if (fileType === "video") return "text-purple-400 bg-purple-400/10"
+    if (fileType === "audio") return "text-green-400 bg-green-400/10"
+    return "text-gray-400 bg-gray-400/10"
   }
 
   return (
@@ -111,16 +146,16 @@ export default function NeonImageUpload() {
           <h1 className="text-6xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent mb-4 animate-pulse">
             NEON UPLOAD
           </h1>
-          <p className="text-xl text-cyan-300/80 font-light tracking-wide">Upload your images with style</p>
+          <p className="text-xl text-cyan-300/80 font-light tracking-wide">Upload your media files with style</p>
           <div className="w-32 h-1 bg-gradient-to-r from-cyan-500 to-blue-500 mx-auto mt-4 rounded-full"></div>
         </div>
 
         {/* Preview Mode Notice */}
         <div className="max-w-2xl mx-auto mb-8">
           <div className="bg-gradient-to-r from-yellow-900/40 to-orange-900/40 backdrop-blur-lg border border-yellow-500/30 rounded-lg p-4 text-center">
-            <p className="text-yellow-300 font-medium">🚀 Preview Mode Active</p>
+            <p className="text-yellow-300 font-medium">🚀 High-Speed Upload Mode</p>
             <p className="text-yellow-400/80 text-sm mt-1">
-              Files are processed locally for demonstration. In production, use Vercel Blob for permanent storage.
+              Optimized for fast uploads. Supports images, videos (MP4), and audio (MP3) files.
             </p>
           </div>
         </div>
@@ -183,9 +218,13 @@ export default function NeonImageUpload() {
                   <Upload className="w-12 h-12 text-cyan-400" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-cyan-300 mb-2">Drop your images here</h3>
-                  <p className="text-cyan-400/70">or click to browse files</p>
-                  <p className="text-sm text-cyan-500/60 mt-2">Supports: JPG, PNG, GIF, WebP, SVG, BMP, TIFF</p>
+                  <h3 className="text-xl font-semibold text-cyan-300 mb-2">Drop your media files here</h3>
+                  <p className="text-cyan-400/70">or click to browse all device files</p>
+                  <div className="text-sm text-cyan-500/60 mt-3 space-y-1">
+                    <p>📸 Images: JPG, PNG, GIF, WebP, SVG, BMP, TIFF</p>
+                    <p>🎥 Videos: MP4, MPEG, MOV, AVI (up to 50MB)</p>
+                    <p>🎵 Audio: MP3, WAV, OGG (up to 10MB)</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -194,7 +233,7 @@ export default function NeonImageUpload() {
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/*"
+              accept="image/*,video/*,audio/*,.mp4,.mp3,.gif"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -206,7 +245,7 @@ export default function NeonImageUpload() {
           <Card className="max-w-2xl mx-auto mb-8 bg-black/40 backdrop-blur-lg border border-cyan-500/30 shadow-2xl shadow-cyan-500/20">
             <div className="p-6">
               <h3 className="text-lg font-semibold text-cyan-300 mb-4 flex items-center">
-                <ImageIcon className="w-5 h-5 mr-2" />
+                <File className="w-5 h-5 mr-2" />
                 Selected Files ({selectedFiles.length})
               </h3>
               <div className="space-y-3 max-h-60 overflow-y-auto">
@@ -215,9 +254,16 @@ export default function NeonImageUpload() {
                     key={index}
                     className="flex items-center justify-between p-3 bg-black/30 rounded-lg border border-cyan-500/20"
                   >
-                    <div className="flex-1">
-                      <p className="text-cyan-300 font-medium truncate">{file.name}</p>
-                      <p className="text-cyan-400/60 text-sm">{formatFileSize(file.size)}</p>
+                    <div className="flex items-center space-x-3 flex-1">
+                      {getFileIcon(file)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-cyan-300 font-medium truncate">{file.name}</p>
+                        <div className="flex items-center space-x-2 text-xs">
+                          <span className="text-cyan-400/60">{formatFileSize(file.size)}</span>
+                          <span className="text-cyan-500/60">•</span>
+                          <span className="text-cyan-400/60">{file.type}</span>
+                        </div>
+                      </div>
                     </div>
                     <Button
                       onClick={() => removeFile(index)}
@@ -238,7 +284,7 @@ export default function NeonImageUpload() {
                 {uploading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Uploading...
+                    Uploading at high speed...
                   </>
                 ) : (
                   <>
@@ -283,20 +329,36 @@ export default function NeonImageUpload() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-cyan-300 font-medium truncate">{result.file}</p>
-                          {result.success && (
-                            <span className="text-green-400 text-xs bg-green-400/10 px-2 py-1 rounded">Uploaded</span>
+                          {result.success && result.data && (
+                            <span className={`text-xs px-2 py-1 rounded ${getFileTypeColor(result.data.fileType)}`}>
+                              {result.data.fileType?.toUpperCase() || "FILE"}
+                            </span>
                           )}
                         </div>
 
                         {result.success && result.data ? (
                           <div className="space-y-3">
-                            {/* Image Preview */}
+                            {/* Media Preview */}
                             <div className="flex items-center space-x-4">
-                              <img
-                                src={result.data.previewUrl || "/placeholder.svg"}
-                                alt={result.file}
-                                className="w-16 h-16 object-cover rounded border border-cyan-500/30 shadow-lg"
-                              />
+                              {result.data.fileType === "image" && result.data.previewUrl ? (
+                                <img
+                                  src={result.data.previewUrl || "/placeholder.svg"}
+                                  alt={result.file}
+                                  className="w-16 h-16 object-cover rounded border border-cyan-500/30 shadow-lg"
+                                />
+                              ) : result.data.fileType === "video" ? (
+                                <div className="w-16 h-16 bg-purple-500/20 rounded border border-purple-500/30 flex items-center justify-center">
+                                  <Video className="w-8 h-8 text-purple-400" />
+                                </div>
+                              ) : result.data.fileType === "audio" ? (
+                                <div className="w-16 h-16 bg-green-500/20 rounded border border-green-500/30 flex items-center justify-center">
+                                  <Music className="w-8 h-8 text-green-400" />
+                                </div>
+                              ) : (
+                                <div className="w-16 h-16 bg-gray-500/20 rounded border border-gray-500/30 flex items-center justify-center">
+                                  <File className="w-8 h-8 text-gray-400" />
+                                </div>
+                              )}
                               <div className="flex-1">
                                 <p className="text-green-400 text-sm mb-1">{result.data.message}</p>
                                 <p className="text-cyan-400/60 text-xs">

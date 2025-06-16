@@ -9,23 +9,62 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 })
+    // Validate file type - support images, videos, and audio
+    const supportedTypes = [
+      // Images
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/svg+xml",
+      "image/bmp",
+      "image/tiff",
+      // Videos
+      "video/mp4",
+      "video/mpeg",
+      "video/quicktime",
+      "video/x-msvideo",
+      // Audio
+      "audio/mp3",
+      "audio/mpeg",
+      "audio/wav",
+      "audio/ogg",
+    ]
+
+    if (!supportedTypes.includes(file.type)) {
+      return NextResponse.json(
+        {
+          error: "Unsupported file type",
+          supportedTypes: supportedTypes,
+        },
+        { status: 400 },
+      )
     }
 
-    // Validate file size (max 10MB for demo)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: "File size must be less than 10MB" }, { status: 400 })
+    // Validate file size (max 50MB for videos, 10MB for others)
+    const maxSize = file.type.startsWith("video/") ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      const maxSizeMB = file.type.startsWith("video/") ? "50MB" : "10MB"
+      return NextResponse.json(
+        {
+          error: `File size must be less than ${maxSizeMB}`,
+        },
+        { status: 400 },
+      )
     }
 
-    // Convert file to base64 for preview
-    const arrayBuffer = await file.arrayBuffer()
-    const base64 = Buffer.from(arrayBuffer).toString("base64")
-    const dataUrl = `data:${file.type};base64,${base64}`
+    // Convert file to base64 for preview (only for small files)
+    let dataUrl = null
+    if (file.size < 5 * 1024 * 1024) {
+      // Only preview files under 5MB
+      const arrayBuffer = await file.arrayBuffer()
+      const base64 = Buffer.from(arrayBuffer).toString("base64")
+      dataUrl = `data:${file.type};base64,${base64}`
+    }
 
-    // Simulate upload delay
-    await new Promise((resolve) => setTimeout(resolve, Math.random() * 2000 + 500))
+    // Fast upload simulation (removed delay)
+    // In production, this would upload to Vercel Blob immediately
 
     // Generate realistic server URL
     const timestamp = Date.now()
@@ -47,6 +86,7 @@ export async function POST(request: NextRequest) {
       contentType: file.type,
       uploadedAt: new Date().toISOString(),
       message: "File uploaded successfully to server",
+      fileType: file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : "audio",
     }
 
     return NextResponse.json(mockResponse)
@@ -64,25 +104,25 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({
-    message: "Image Upload API (Preview Mode)",
+    message: "Media Upload API (Preview Mode)",
     endpoint: "/api/upload",
     method: "POST",
     contentType: "multipart/form-data",
-    supportedFormats: [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-      "image/svg+xml",
-      "image/bmp",
-      "image/tiff",
-    ],
-    maxFileSize: "10MB",
+    supportedFormats: {
+      images: ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml", "image/bmp", "image/tiff"],
+      videos: ["video/mp4", "video/mpeg", "video/quicktime", "video/x-msvideo"],
+      audio: ["audio/mp3", "audio/mpeg", "audio/wav", "audio/ogg"],
+    },
+    maxFileSize: {
+      images: "10MB",
+      videos: "50MB",
+      audio: "10MB",
+    },
     note: "This is a preview version. In production, files would be stored using Vercel Blob.",
     usage: {
-      description: "Upload image files using FormData",
+      description: "Upload media files using FormData",
       example:
-        'const formData = new FormData(); formData.append("file", imageFile); fetch("/api/upload", { method: "POST", body: formData })',
+        'const formData = new FormData(); formData.append("file", mediaFile); fetch("/api/upload", { method: "POST", body: formData })',
     },
   })
 }

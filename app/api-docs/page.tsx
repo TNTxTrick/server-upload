@@ -1,3 +1,4 @@
+//oi doi oi hàng chợ chỉ thế thôi
 "use client"
 
 import { useState } from "react"
@@ -24,7 +25,7 @@ async function uploadMedia(file) {
   formData.append('file', file);
 
   try {
-    const response = await fetch('https://your-app.vercel.app/api/upload', {
+    const response = await fetch('https://server-upload.vercel.app/api/upload', {
       method: 'POST',
       body: formData
     });
@@ -99,7 +100,7 @@ def upload_media_file(file_path):
     Returns:
         dict: Server response with file URL and metadata
     """
-    url = "https://your-app.vercel.app/api/upload"
+    url = "https://server-upload.vercel.app/api/upload"
     
     try:
         with open(file_path, 'rb') as file:
@@ -215,7 +216,7 @@ curl -X POST https://your-app.vercel.app/api/upload \\
 {
   "success": true,
   "filename": "video.mp4",
-  "url": "https://your-app.vercel.app/uploads/1703123456789_abc123.mp4",
+  "url": "https://server-upload.vercel.app/uploads/1703123456789_abc123.mp4",
   "size": 15728640,
   "contentType": "video/mp4",
   "fileType": "video",
@@ -264,7 +265,7 @@ curl -X POST https://your-app.vercel.app/api/upload \\
                 <div>
                   <h3 className="text-lg font-semibold text-cyan-400 mb-2">Endpoint</h3>
                   <code className="bg-black/50 text-cyan-300 px-3 py-2 rounded block">
-                    POST https://your-app.vercel.app/api/upload
+                    POST https://server-upload.vercel.app/api/upload
                   </code>
                 </div>
 
@@ -404,7 +405,7 @@ curl -X POST https://your-app.vercel.app/api/upload \\
                     <code>{`{
   "success": true,
   "filename": "video.mp4",
-  "url": "https://your-app.vercel.app/uploads/...",
+  "url": "https://server-upload.vercel.app/uploads/...",
   "size": 15728640,
   "contentType": "video/mp4",
   "fileType": "video",

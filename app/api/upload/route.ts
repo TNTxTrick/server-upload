@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const serverFileName = `${timestamp}_${randomId}.${fileExtension}`
 
     // Mock server URL (in production, this would be real Vercel Blob URL)
-    const serverUrl = `https://your-app.vercel.app/uploads/${serverFileName}`
+    const serverUrl = `https://server-upload.vercel.app/uploads/${serverFileName}`
 
     const mockResponse = {
       success: true,
